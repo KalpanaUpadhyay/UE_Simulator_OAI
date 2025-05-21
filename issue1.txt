@@ -1,0 +1,100 @@
+Okay now  lets learn internal flow, say during running I am getting autentication failure dur to sync fail, what could be the flow and issue
+
+
+Great — let’s dig into the internal flow of the Authentication Failure due to sync failure in the context of OAI UE and 4G EPC (MME + HSS). This issue usually points to AKA (Authentication and Key Agreement) failure caused by mismatched sequence numbers between UE and HSS.
+
+🔁 Context: 4G AKA Flow (EPS-AKA)
+UE → eNodeB → MME: Attach Request (with IMSI)
+
+MME ↔ HSS: Send Authentication Info Request (AIR), gets back a vector from HSS
+
+MME → UE: NAS Authentication Request (includes RAND, AUTN)
+
+UE computes RES using:
+
+RAND
+
+AUTN (XOR’ed with SQN)
+
+UE key from USIM/emulated key store
+
+If UE detects that the SQN is not within the expected range, it sends:
+
+Authentication Failure (cause: synch failure)
+
+Includes AUTS to help HSS resync
+
+🔍 Internal Flow and Code Locations (OAI)
+🔸 OAI UE Side:
+File: openair3/NAS/UE/EMM/Service/emm_fsm.c, AuthenticationResponse.c, AuthenticationFailure.c
+
+Trigger: UE gets AUTN from MME and checks sequence number (SQN)
+
+If SQN is outside allowed window → generates AUTS and sends Authentication Failure
+
+🔸 OAI MME Side:
+File: openairCN/SRC/NAS/EMM/Authentication.c
+
+Receives Authentication Failure with AUTS
+
+MME forwards this to HSS via another Authentication Info Request (AIR) with resyncInfo
+
+HSS uses AUTS to compute correct SQN and returns a new vector
+
+MME retries Authentication Request
+
+❗ Root Causes of Sync Failure
+Cause	Description
+❌ Mismatched SQN	UE and HSS are not aligned on SQN; could be due to reuse of old auth vector or out-of-sync USIM state
+🔁 Replay Attack Prevention	UE rejects reused AUTN (with old SQN)
+🧪 Hardcoded Keys	If UE uses emulated USIM (e.g., hardcoded K/OPC) and mismatch occurs
+🔄 No resync handled	HSS or MME not handling resync properly
+🧱 Missing/incorrect AUTS handling	If UE fails to generate correct AUTS or MME fails to forward it
+
+🧪 Debugging Steps
+✅ 1. Verify UE Key Config:
+In UE config file:
+
+USIM:
+  imsi: "001010123456789"
+  key: "8baf473f2f8fd09487cccbd7097c6862"
+  opc: "e734f8734007d6c5ce7a0508809e7e9c"
+Ensure same IMSI/key/OPC is provisioned in HSS subscriber database.
+
+✅ 2. Enable Detailed Logs:
+In OAI UE:
+
+--log_verbosity level --ninja -d
+Watch for logs like:
+
+EMM: Authentication Failure (Cause: Synchronization Failure)
+Sending AUTS...
+In MME logs:
+
+Received Authentication Failure with AUTS
+Resync requested from HSS
+✅ 3. Check HSS Handling:
+In openair-cn HSS, verify:
+
+HandleResync is implemented
+
+AUTS is correctly parsed
+
+New vector is generated on resync
+
+✅ 4. Force Vector Refresh in HSS DB (if persistent issue):
+If it always fails, clear old auth vectors:
+
+DELETE FROM `eps_authentication_vectors` WHERE imsi='001010123456789';
+Then restart MME and UE.
+
+✅ Summary Fix Flow
+UE detects SQN mismatch → Sends Authentication Failure + AUTS
+↓
+MME sends resyncInfo to HSS
+↓
+HSS recalculates SQN and returns new vector
+↓
+MME sends new Authentication Request
+↓
+UE proceeds with correct RES → Authentication Success
