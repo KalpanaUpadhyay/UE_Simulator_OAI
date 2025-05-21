@@ -1,0 +1,71 @@
+🛰️ 4G Message Flow in OAI UE Simulator (Typical Attach and Data Session):
+Let's go through the message flow layer by layer (RRC + NAS):
+
+🟦 1. RRC Connection Setup (RAN Level - UE <-> eNodeB):
+UE Simulator	eNodeB
+RRC Connection Request	← UE initiates connection (Random Access).
+RRC Connection Setup	→ eNB allocates resources and sends config.
+RRC Connection Setup Complete	← UE sends back setup complete.
+
+🟨 2. NAS Attach Procedure (Core Level - UE <-> MME):
+UE Simulator	MME
+Attach Request (NAS)	← Includes IMSI, UE capabilities, etc.
+Authentication Request	→ From MME via eNB (challenge).
+Authentication Response	← UE sends response (based on key).
+Security Mode Command	→ To start NAS encryption/integrity.
+Security Mode Complete	← Acknowledges security context setup.
+Attach Accept	→ MME accepts and assigns GUTI.
+Attach Complete	← UE acknowledges.
+
+Behind the scenes: MME interacts with HSS for IMSI → Authentication, and SGW/PGW to allocate an IP.
+
+🟩 3. ESM (Session Management) - Bearer Setup:
+UE Simulator	MME + SGW/PGW
+Create Session Request	→ MME asks PGW to create default bearer.
+Create Session Response	← PGW responds with IP, bearer info.
+Initial Context Setup	→ MME instructs eNB to setup DRB.
+Default Bearer Activation	← UE is informed of IP and bearer.
+
+📡 4. Data Transfer (IP layer):
+Once the bearer is up:
+
+UE can ping the remote IPs.
+
+UE can run iperf to test throughput.
+
+IP packets are tunneled through GTP-U over S1-U interface.
+
+🧪 Use Cases of UE Simulator:
+Test eNodeB under controlled conditions.
+
+Core network protocol stack testing.
+
+Load testing multiple UEs (mass attach/detach).
+
+Debugging issues in NAS, RRC, and bearer procedures.
+
+🧰 Relevant Directories in OAI UE:
+If you're exploring OAI UE source code:
+
+openair3/ – NAS and ESM layers.
+
+openair2/ – RRC, PDCP, RLC, MAC.
+
+openair1/ – PHY.
+
+targets/PROJECTS/ – Entry points and configs.
+
+🔁 Summary Flow Diagram (Simplified):
+[UE Sim] → RRC Req → [eNB]
+        ← RRC Setup ←
+        → RRC Comp →
+        → Attach Req (NAS) →
+            → Auth Req →
+            ← Auth Res ←
+            → Sec Mode Cmd →
+            ← Sec Mode Comp ←
+            → Attach Accept →
+            ← Attach Complete ←
+        → Bearer Setup → [MME + SGW/PGW]
+        ← Bearer Accept ←
+        → IP Data (ping/iperf) →

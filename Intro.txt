@@ -1,0 +1,15 @@
+A UE (User Equipment) Simulator in a 4G network is a software or hardware tool that emulates the behavior of a real mobile device (smartphone, modem, etc.) by mimicking its radio and protocol stack behavior. It's mainly used for testing, development, and validation of the Radio Access Network (RAN) and Core Network (CN) components like eNodeB, MME, HSS, SGW, and PGW without needing a physical UE.
+
+🔧 What is OAI UE Simulator?
+In OpenAirInterface (OAI), the UE Simulator is a part of the OAI RAN project that emulates a 4G LTE-compliant User Equipment. It runs in user space on a Linux machine and communicates with an eNodeB (also simulated or physical). It supports both RF and RF-less (emulated channel) modes.
+
+🧠 Key Roles of UE Simulator:
+Emulates UE behavior (PHY, MAC, RLC, PDCP, RRC, NAS layers).
+
+Initiates connection with eNodeB.
+
+Authenticates with Core Network via NAS messages.
+
+Requests IP address via Evolved Packet Core (EPC).
+
+Transfers data if needed (ping, iperf, etc.).
