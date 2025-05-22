@@ -1,0 +1,39 @@
+APN and IMSI are both critical in mobile networking, but they serve completely different purposes.
+
+🔍 Difference Between APN and IMSI
+Feature			IMSI (International Mobile Subscriber Identity)			APN (Access Point Name)
+Purpose	Uniquely 	identifies a subscriber (SIM card) in the mobile network	Identifies the data service or external network the UE wants to connect to
+Who uses it?		Core Network uses it to authenticate the user (via HSS/UDM)	Core Network uses it to route traffic to the right service or network
+Format			Numeric (e.g., 001010000000803)					Textual (e.g., internet, ims, mms)
+Where is it stored?	In the SIM card (USIM)						In the UE config or negotiated during session
+When is it used?	During registration/attach phase (for authentication)		During PDN session setup (for data access)
+Example			001010000000803 (MCC=001, MNC=01, MSIN=000000803)		ims or internet.mnc001.mcc001.gprs
+
+📱 IMSI – Think of it as:
+Your phone number's DNA — a permanent ID in your SIM that tells the network who you are.
+
+Format:
+
+IMSI = MCC + MNC + MSIN
+      = 3 digits + 2–3 digits + remaining digits
+Example:
+
+00101 = MCC 001, MNC 01 (Test network)
+
+000000803 = MSIN (subscriber-specific)
+
+🌐 APN – Think of it as:
+The “access gateway” — the kind of internet service you're asking for (internet, IMS, enterprise VPN, etc.)
+
+Examples:
+
+internet → for regular data
+
+ims → for VoLTE / IMS SIP signaling
+
+enterprise.apn → for corporate/private network access
+
+🧩 Summary
+You want to...	What you need
+Identify the user/subscriber	IMSI
+Connect to a type of data service	APN
