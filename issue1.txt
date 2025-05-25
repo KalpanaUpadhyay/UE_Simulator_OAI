@@ -88,6 +88,8 @@ If it always fails, clear old auth vectors:
 DELETE FROM `eps_authentication_vectors` WHERE imsi='001010123456789';
 Then restart MME and UE.
 
+For IMS : you need to first go to IMS server to add details for IMSI
+
 ✅ Summary Fix Flow
 UE detects SQN mismatch → Sends Authentication Failure + AUTS
 ↓
