@@ -1,0 +1,113 @@
+If you’re using OAI RAN with LTE (4G) and have an SDR (e.g., USRP B210/N310/X310), you can run a full-stack UE simulation (UESIM) with real radio transmission using lte-uesoftmodem. The key steps involve:
+
+✅ Goal
+Run OAI LTE UE (lte-uesoftmodem) with:
+
+A real SDR (not --rfsim)
+
+Attach to eNB (OAI LTE eNB or Open5GS-compatible)
+
+Establish PDU session and exchange real user data (ping, curl, etc.)
+
+Stable attach and IP configuration
+
+✅ Required Components
+Component	Example
+SDR	USRP B210, X310, N310 (eNB and UE side)
+eNB	lte-softmodem from OAI
+EPC	OAI EPC or Open5GS
+UE	lte-uesoftmodem
+RF environment	Shielded, attenuated, or controlled (for testing)
+
+🔧 1. Set up and connect the SDR
+Ensure your SDR is connected, powered, and visible:
+
+uhd_find_devices
+You should see something like:
+
+[INFO] [UHD] Device found:
+    Device Address:
+        type: b200
+        ...
+⚙️ 2. Configure the UE Softmodem
+Run lte-uesoftmodem with SDR support (no --rfsim). Use config file or command-line args like:
+
+sudo ./lte-uesoftmodem -C 2685000000 -r 25 --rf-config-file usrp.conf --ue-rxgain 90 --ue-txgain 90
+Where:
+
+-C: EARFCN DL frequency (check your eNB)
+
+-r: N_RB_DL (number of downlink RBs), e.g., 25 for 5 MHz
+
+--rf-config-file: optional, e.g., usrp.conf for custom SDR tuning
+
+--ue-rxgain, --ue-txgain: gain tuning
+
+A simple config file example (usrp.conf):
+
+[rf_config]
+sdr_addrs = "type=b200"
+tx_gain = 90
+rx_gain = 90
+📡 3. Ensure LTE eNB is running and discoverable
+Use lte-softmodem on the gNB side with appropriate frequency and RF configuration. Make sure:
+
+eNB is broadcasting SIB1/SIB2
+
+MME connection is up
+
+PLMN matches UE config
+
+EARFCN matches -C in the UE
+
+🔌 4. EPC Setup (Core Network)
+Use either:
+
+OAI EPC (mme, hss, spgw)
+
+Open5GS EPC
+
+Make sure:
+
+UE IMSI is provisioned in HSS/UDM
+
+APN is set (e.g., oai.ipv4)
+
+UE IP is assigned (check oaitun_ue1)
+
+✅ 5. Validate Attach and PDU Setup
+Attach logs (in UE):
+Look for:
+
+[INFO][RRC] UE switched to RRC_CONNECTED
+[INFO][NAS] PDU session accepted
+[INFO][NAS] IP address: 10.x.x.x
+Interface on UE:
+ip addr show oaitun_ue1
+Should show a valid IP like 10.1.1.2/24.
+
+🌐 6. Enable Data Connectivity
+Once UE gets an IP:
+
+Set up NAT on host to route UE traffic:
+
+sudo iptables -t nat -A POSTROUTING -s 10.1.1.0/24 -o <host-interface> -j MASQUERADE
+sudo sysctl -w net.ipv4.ip_forward=1
+Replace <host-interface> with the interface connected to internet (e.g., eth0 or ens33).
+
+🌍 7. Test UE Internet Access
+Run inside UE namespace or same shell if not isolated:
+
+ping -I oaitun_ue1 8.8.8.8
+curl -I http://example.com --interface oaitun_ue1
+🧪 Optional: Use Network Namespace for UE
+You can isolate UE IP stack in a namespace (ip netns) if you want UE-like behavior (optional for testing). If you want help with this, I can guide you with namespace isolation + routing.
+
+🧩 Common Issues
+Symptom	Cause
+No IP on oaitun_ue1	PDU session failed, check EPC
+Cannot ping	NAT or iptables issue
+SDR errors	UHD not installed/configured
+UE doesn't attach	Frequency mismatch, PLMN mismatch, RF gain too low
+
+

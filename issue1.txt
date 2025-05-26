@@ -98,3 +98,73 @@ HSS recalculates SQN and returns new vector
 MME sends new Authentication Request
 ↓
 UE proceeds with correct RES → Authentication Success
+
+
+
+✅ 1. Where is AUTS generated in the OAI UE code?
+The AUTS is generated in the NAS layer when the UE detects that the SQN (Sequence Number) in the AUTN (Authentication Token) is out of sync.
+
+🔍 Location in Code (OAI UE):
+File:
+openair3/NAS/UE/EMM/Security/Authentication.c
+
+Function:
+emm_proc_authentication_request()
+
+Inside this function:
+
+UE decodes RAND and AUTN from the MME.
+
+It performs integrity check (f1) and extracts SQN.
+
+If SQN is not acceptable (too far behind/ahead), it calls:
+
+generate_auts(...)  // Generates AUTS using RESYNC algo
+emm_proc_authentication_failure(...)  // Sends AUT Failure message
+🔐 generate_auts():
+Implements resynchronization procedure: AUTS = SQN ⊕ AK || MAC-S
+
+Uses secret K, same as in HSS
+
+This function uses milennas_f5 (AK) and milennas_f1 (MAC)
+
+✅ 2. Where AUTS is handled on MME side?
+🔍 Location in Code (OAI MME):
+File:
+openairCN/NAS/MME/Authentication.c
+
+Function:
+emm_proc_authentication_failure()
+This function checks if the cause is EMM_CAUSE_SYNCH_FAILURE:
+
+if (emm_cause == EMM_CAUSE_SYNCH_FAILURE) {
+    // Extract AUTS from message
+    // Include it in the next Authentication Info Request (AIR)
+    // Send to HSS
+}
+🛠️ Simulate Sync Failure (for testing)
+You can do this by misaligning the sequence number in HSS or modifying UE to intentionally reject AUTN.
+
+🧪 Option 1: Modify UE code to always trigger sync failure
+In emm_proc_authentication_request(), add:
+
+emm_proc_authentication_failure(emm_ctx, EMM_CAUSE_SYNCH_FAILURE);
+return RETURNok;
+This will bypass checking and always simulate a sync issue.
+
+🧪 Option 2: Alter HSS to return a bad SQN
+In the HSS code (if using OpenAirHSS or custom MySQL-backed HSS), modify the send_authentication_info() response to send stale SQN by subtracting from current value.
+
+For example, return a vector with SQN - 1000.
+
+🔄 End-to-End Trace Summary
+Component	Message/Action
+UE	Receives RAND, AUTN
+UE	Computes SQN ⊕ AK from AUTN
+UE	Detects out-of-sync SQN
+UE	Sends Authentication Failure + AUTS
+MME	Forwards AUTS to HSS in Authentication Info Request
+HSS	Computes correct SQN using AUTS
+HSS	Returns new vector
+MME	Sends new Authentication Request
+UE	Authenticates successfully
